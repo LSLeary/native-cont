@@ -1,0 +1,7 @@
+dist*/
+tex/*.aux
+tex/*.log
+tex/*.pdf
+tex/*.toc
+topo*
+.rules

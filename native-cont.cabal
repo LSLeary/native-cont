@@ -1,0 +1,87 @@
+cabal-version:      3.4
+name:               native-cont
+version:            0.1.0.0
+synopsis:           Native Delimited Continuations
+description:        A safe interface to the delimited continuation primops.
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             L. S. Leary
+maintainer:         L.S.Leary.II@gmail.com
+copyright:          (c) L. S. Leary 2024
+category:           Control
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+tested-with:        GHC == 9.6.6, GHC == 9.8.2, GHC == 9.10.1
+homepage:           https://github.com/LSLeary/native-cont
+bug-reports:        https://github.com/LSLeary/native-cont/issues
+extra-source-files: CHANGELOG.md README.md
+
+common lib
+  build-depends:      base >=4.18 && <4.21
+  default-language:   GHC2021
+  default-extensions: BlockArguments,
+                      LambdaCase,
+                      DerivingVia,
+                      RoleAnnotations,
+                      ExplicitNamespaces,
+  ghc-options:        -Wall
+
+library
+  import:          lib
+  hs-source-dirs:  srcs/main
+  exposed-modules: NativeCont
+                   Control.Continuation
+                   Control.Continuation.Explicit
+                   Control.Continuation.Inferred
+
+library loop
+  import:          lib
+  visibility:      public
+  hs-source-dirs:  srcs/loop
+  exposed-modules: Control.Continuation.Loop
+  build-depends:   native-cont,
+
+library exception
+  import:          lib
+  visibility:      public
+  hs-source-dirs:  srcs/exception
+  exposed-modules: Control.Continuation.Exception
+  build-depends:   native-cont,
+                   transformers >=0 && <0.7,
+
+library handler
+  import:          lib
+  visibility:      public
+  hs-source-dirs:  srcs/handler
+  exposed-modules: Control.Continuation.Handler
+                   Control.Continuation.Handler.Explicit
+                   Control.Continuation.Handler.Inferred
+  other-modules:   NativeCont.Handler.Internal
+  build-depends:   native-cont
+
+library coroutine
+  import:          lib
+  visibility:      public
+  hs-source-dirs:  srcs/coroutine
+  exposed-modules: Control.Continuation.Coroutine
+  build-depends:   native-cont,
+                   native-cont:handler,
+
+library algebraic
+  import:          lib
+  visibility:      public
+  hs-source-dirs:  srcs/algebraic
+  exposed-modules: Control.Continuation.Algebraic
+  build-depends:   native-cont,
+                   native-cont:handler,
+                   transformers >=0 && <0.7,
+
+source-repository head
+  type:     git
+  location: https://github.com/LSLeary/native-cont.git
+
+--source-repository this
+--  type:     git
+--  location: https://github.com/LSLeary/native-cont.git
+--  tag:      v0.1.0.0
+
