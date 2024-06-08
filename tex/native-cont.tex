@@ -1,0 +1,708 @@
+
+% Frontmatter {{{
+
+\documentclass{report}
+
+\usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage[a4paper, margin=60pt]{geometry}
+\usepackage{parskip}
+
+\frenchspacing
+
+\title{\emph{native-cont}: Reduction Semantics \& Derivations}
+\author{L. S. Leary}
+
+% }}}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\chapter{main} % {{{
+
+\section{NativeCont} % {{{
+
+\subsection{Scope} % {{{
+
+Swap incompatibilities!
+
+% Layout
+\newcommand{\p}{ \kern0.5pt }
+\newcommand{\n}{ \kern-0.5pt }
+%
+%
+% Haskell
+\newcommand{\code}[1]{\texttt{#1}}
+%
+% INCOMPATIBILITY: MathJax doesn't support \expandafter
+%
+% LaTeX
+\newcommand{\declare}[2][]{
+  \expandafter\newcommand\csname #1#2\endcsname{\code{#2}}
+}
+\newcommand{\redeclare}[2][]{
+  \expandafter\renewcommand\csname #1#2\endcsname{\code{#2}}
+}
+%
+% MathJax
+%\newcommand{\declare}[2][]{ \newcommand{#1#2}{\code{#2}} }
+%\newcommand{\redeclare}[2][]{ \renewcommand{#1#2}{\code{#2}} }
+%
+\newcommand{\Hask}{\text{Hask}}
+\newcommand{\unit}{\code{()}}
+%
+% INCOMPATIBILITY: MathJax doesn't want to escape #.
+%
+% MathJax
+%\newcommand{\hash}{\code{#}}
+%
+% LaTeX
+\newcommand{\hash}{\code{\#}}
+%
+\renewcommand{\|}{\mathpunct{\,|}}
+\newcommand{\app}{\p\p\p\p\p}
+\newcommand{\comp}{\circ}
+\newcommand{\lam}[2]{\lambda #1 . \, #2}
+\newcommand{\del}[2]{\delta  #1 . \, #2}
+\newcommand{\bind}{>\n\n\n\n\n\n\n>\n\n\n\n\n\n=}
+\newcommand{\mapping}{<\n\n\n\n\n\n\n\&\n\n\n\n\n\n\n>}
+\declare{const}
+\declare{pure}
+\declare{when}
+\declare{Base}
+%
+% INCOMPATIBILITY: Spacing around . seems to differ greatly in MathJax.
+%
+% LaTeX
+\newcommand{\qual}{.}
+%
+% MathJax
+%\newcommand{\qual}{\p.\n\n\n}
+%
+%
+% Do Notation
+\newcommand{\ind}{\,\,\,\,\,\,\,}
+\newcommand{\statement}[1]{& \ind #1 \\}
+\newcommand{\from}{\leftarrow}
+\newcommand{\doblockSL}[1]{{
+  \renewcommand{\ind}{}
+  \begin{aligned}
+    \code{do} \,\, #1
+  \end{aligned}
+}}
+\newcommand{\doblockNL}[2]{
+  \begin{aligned}
+    & #1 \code{do} \\
+      #2
+  \end{aligned}
+}
+%
+%
+% ST
+\declare{ST}
+\declare{newSTRef}
+\declare{readSTRef}
+\declare{writeSTRef}
+\declare{modifySTRef}
+%
+% Delimited Continuations
+\newcommand{\sub}{\leq_{enc}}
+\newcommand{\redAx}{ \operatorname*{\mathrel{\longrightarrow}} }
+\newcommand{\Not}[1]{\n\rlap{\,\,\,\,/} #1}
+\newcommand{\step}{ \operatorname*{\mathrel{\longmapsto}} }
+\newcommand{\F}[2]{ {}^{#1} \n\n\n\n \mathcal{F}^{#2} }
+\newcommand{\E}{\operatorname*{\mathit E}}
+\newcommand{\br}[1]{{\left(#1\right)}}
+\newcommand{\sq}[1]{{\left[#1\right]}}
+\newcommand{\hole}{\bullet}
+\newcommand{\eval}{ \operatorname*{\mathrm{eval}} }
+\newcommand{\proj}{\operatorname*{\pi}}
+\newcommand{\parto}{\rightharpoonup}
+\declare{Cont}
+\declare{runCont}
+\declare[hs]{lower}
+\declare{newLimit}
+\declare{impose}
+\declare{delimit}
+\declare{sunder}
+\declare{sever}
+\declare{control}
+\declare{shift}
+\declare{abort}
+\declare{return}
+%
+% Base Monad Coercions
+\declare{IO}
+\declare{contToIO}
+\declare{ioToCont}
+\declare{unsafeSTToCont}
+\declare{runIO}
+\declare{unsafeRunST}
+
+% }}}
+
+% Cont, Limit#, sunder# {{{
+
+\subsection{runCont} % {{{
+
+\( \runCont \) extends \( L_\Hask \) with terms of the form \( \runCont \app e \).
+The corresponding reduction axioms are twofold.
+\begin{align*}
+  \runCont \app (\pure \app h) &\redAx_\Hask h \\
+  \runCont \app e &\redAx_\Hask \runCont \app e' \iff e \step e'
+\end{align*}
+
+% }}}
+
+\subsection{lower\#} % {{{
+
+\( \hslower\hash \) is a coercion; it's erased before execution and consequently has no role in the reduction semantics.
+
+% }}}
+
+\subsection{contToIO \& ioToCont} % {{{
+
+In implementation, \( \contToIO \) and \( \ioToCont \) are both coercions.
+Morally, however, they extend \( L_\IO \) with terms of the form \( \contToIO \app e \).
+The corresponding reduction axioms are threefold.
+\begin{align*}
+  \contToIO \app (\pure \app h)
+    &\redAx_\IO \pure \app h \\
+  \contToIO \app {\E} \sq{\ioToCont \app i}
+    &\redAx_\IO i \bind \lam x { \contToIO \app {{\E} \sq{\pure \app x}} } \\
+  \contToIO \app e
+    &\redAx_\IO \contToIO \app e' \iff e \step e'
+\end{align*}
+
+% }}}
+
+\subsection{unsafeSTToCont} % {{{
+
+Coercion.
+
+% }}}
+
+\subsection{newLimit\#} % {{{
+
+Morally, a \emph{limit binder} under which execution continues.
+In a dedicated calculus with terms \( e \) we would have \( \delta l. \, e \) to explicitly bind and lexically scope limits, but in Haskell we can only emulate \( \delta \) with \( \newLimit\hash \lambda \) and wield rank-n types to prevent \( l \) from escaping its scope.
+\[
+  \newLimit\hash \app \lam l {\pure \app h}
+    \redAx \pure \app h
+\]
+
+% }}}
+
+\subsection{impose\#} % {{{
+
+Execution continues under the limit.
+\[
+  \impose\hash \app l \app {\left( \pure \app h \right)}
+    \redAx \pure \app h
+\]
+
+% }}}
+
+\subsection{sunder\#} % {{{
+
+The sole control operator, defined only when executed under a corresponding limit.
+\[
+  \impose\hash \app l
+    \app {\E_x} \sq{\sunder\hash \app p \app l \app h}
+      \redAx h \app \lam y {{\E_x} \sq y}
+\]
+This pseudo-axiom is \emph{simplified}; it treats \( L_\Hask \) as a macro language over \( L_\Cont \), implicitly reducing an \( h \) term to the corresponding \( e \) term if one exists.
+Strictly speaking, however, the RHS must be in \( L_\Cont \) or the reduction axiom is ill formed.
+The true axiom is \[
+  \impose\hash \app l
+    \app {\E_x} \sq{\sunder\hash \app p \app l \app h}
+      \redAx {\proj} \br{
+        {\eval_\Hask} \br{h \app \lam y {{\E_x} \sq y}}
+      }
+\] where \begin{align*}
+  &\eval_\Hask(\cdot) : L_\Hask \parto L_\Hask^v \\
+  &\eval_\Hask(h) = v_h \iff h \step_\Hask^* v_h \\
+  &{\proj} \br \cdot : L_\Hask \parto L_\text{Cont} \\
+  &{\proj} \br h = e \iff h = e,
+\end{align*}
+restricted to cases for which both partial functions are defined.
+
+\emph{Reductions for derivative control operators will henceforth be given in simplified, pseudo-axiom form.}
+
+% }}}
+
+% }}}
+
+\subsection{About: This Documentation} % {{{
+
+\subsubsection{Reduction Semantics}
+
+\begin{alignat*}{3}
+  &L_\Hask \quad\quad &&h   &&::=
+    v_h \| h_1 \app h_2 \| \runCont \app e \| \ldots \\
+  &L_\Hask^v          &&v_h &&::=
+    \lam x h \| e \| i \| \ldots \\
+  &L_\Cont &&e   &&::=
+    v_e \| e \bind h \| \del l e \| \impose \app l \app e
+        \| \sunder \app l \app h \| \ioToCont \app i \| \ldots \\
+  &L_\Cont^v          &&v_e &&::=
+    x \| \pure \app h \\
+  &L_\IO              &&i   &&::=
+    v_i \| i \bind h \| \contToIO \app e \| \ldots \\
+  &L_\IO^v            &&v_i &&::=
+    x \| \pure \app h
+\end{alignat*}
+
+\[
+  \E_x ::= \hole
+         \| \E_x \bind h
+         \| \del l \E_x
+         \| \impose \app y \app {\E_x}
+\]
+
+\begin{gather*}
+  e \redAx e_a \wedge e \redAx e_b \implies e_a = e_b \\
+  v_e \Not\redAx e
+\end{gather*}
+
+\[
+  {\E} \sq e \step {\E} \sq{e'} \iff e \redAx e'
+\]
+
+\begin{align*}
+  &\eval(\cdot) : L \parto L^v \\
+  &\eval(e) = v_e \iff e \step^* v_e
+\end{align*}
+
+% }}}
+
+% }}}
+
+\section{Control.Continuation} % {{{
+
+\subsection{newSTRef}
+
+\[
+  \newSTRef := \unsafeSTToCont \comp \Base\qual\newSTRef
+\]
+
+% }}}
+
+\section{Control.Continuation.Explicit} % {{{
+
+\subsection{runIO}
+
+\[
+  \runIO \app p := \hslower \app p \comp \ioToCont
+\]
+
+\subsection{delimit}
+
+\[
+  \delimit \app k := \delta \lam l {\impose \app l \app \br{k \app l}}
+\]
+
+\subsection{sever}
+
+\[
+  {\E}_1 \sq{
+    \impose \app l \app {\E}_2 \sq{\sever \app p \app l \app h}
+  } \step^*
+  {\E}_1 \sq{h \app \lam x {\impose \app l \app {\E}_2 \sq x}}
+\]
+
+\[
+  \sever \app p \app l \app f
+    := \sunder \app p \app l \app \lam k {
+      f \app \br{\impose \app l \comp k}
+    }
+\]
+
+\subsection{control}
+
+\[
+  {\E}_1 \sq { \impose \app l \app {\E}_2 \sq{\control \app p \app l \app h} }
+    \step^*
+  {\E}_1 \sq { \impose \app l \app \br{h \app \lam x {{\E}_2 \sq x}} }
+\]
+
+\[
+  \control \app p \app l \app f
+    := \control_0 \app p \app l \app
+      {\left( \impose \app l \comp f \right)}
+\]
+
+\subsection{shift}
+
+\[
+  {\E}_1 \sq { \impose \app l \app {\E}_2 \sq{\shift \app p \app l \app h} }
+    \step^*
+  {\E}_1 \sq {
+    \impose \app l \app \br{h \app \lam x {\impose \app l \app {\E}_2 \sq x}}
+  }
+\]
+
+\[
+  \shift \app p \app l \app f
+    := \shift_0 \app p \app l \app \br{\impose \app l \comp f}
+\]
+
+\subsection{abort0}
+
+\[
+  {\E}_1 \sq{\impose \app l \app {\E}_2 \sq{\abort_0 \app p \app l \app e}}
+    \step^*
+  {\E}_1 \sq e
+\]
+
+\[
+  \abort_0 \app p \app l := \control_0 \app p \app l \comp \const
+\]
+
+\subsection{abort}
+
+\[
+  {\E}_1 \sq{\impose \app l \app {\E}_2 \sq{\abort \app p \app l \app e}}
+    \step^*
+  {\E}_1 \sq{\impose \app l \app e}
+\]
+
+\[
+  \abort \app p \app l := \control \app p \app l \comp \const
+\]
+
+\subsection{return}
+
+\[
+  {\E}_1 \sq{\impose \app l \app {\E}_2 \sq{\return \app p \app l \app h}}
+    \step^*
+  {\E}_1 \sq{\pure \app h}
+\]
+
+\[
+  \return \app p \app l := \abort_0 \app p \app l \comp \pure
+\]
+
+\subsection{readSTRef}
+
+\[
+  \readSTRef \app p := \unsafeRunST \app p \comp \Base\qual\readSTRef
+\]
+
+\subsection{writeSTRef}
+
+\[
+  \writeSTRef \app p \app r
+    := \unsafeRunST \app p \comp \Base\qual\writeSTRef \app r
+\]
+
+\subsection{modifySTRef}
+
+\[
+  \modifySTRef \app p \app r
+    := \unsafeRunST \app p \comp \Base\qual\modifySTRef \app r
+\]
+
+\subsection{modifySTRef'}
+
+\[
+  \modifySTRef' \app p \app r
+    := \unsafeRunST \app p \comp \Base\qual\modifySTRef' \app r
+\]
+
+\subsection{unsafeRunST}
+
+\[
+  \unsafeRunST \app p := \hslower \app p \comp \unsafeSTToCont
+\]
+
+% }}}
+
+\section{Control.Continuation.Inferred} % {{{
+
+\subsection{delimit}
+
+\declare[q]{X}
+\declare{reflect}
+\declare{evince}
+\[
+  \delimit \app k := \qX\qual\delimit \app \lam l {
+    \reflect \app \br{\evince \app l} \app \br{k \app l}
+  }
+\]
+
+\subsection{newLimit}
+
+\[
+  \newLimit \app k := \qX\qual\newLimit \app \lam l {
+    \reflect \app \br{\evince \app l} \app \br{k \app l}
+  }
+\]
+
+% }}}
+
+% }}}
+
+\chapter{loop} % {{{
+
+\section{Control.Continuation.Loop}
+
+\subsection{loop}
+
+\declare[hs]{loop}
+\( \hsloop \app \lambda \) is treated as a \emph{loop binder} under which execution continues.
+Contrary to \emph{native-cont} conventions, we reuse \( l \) as a loop metavariable.
+In particular, \( l_b \) indicates a loop associated with body \( e_b \). \[
+  {\E} \sq{\hsloop \app \lam {l_b} \pure \app \unit}
+    \step^*
+  {\E} \sq{\hsloop \app \lam {l_b} {e_b}}
+\]
+
+\subsection{continue}
+
+\declare{continue}
+\[
+  {\E}_1 \sq{ \hsloop \app \lam {l_b} {{\E}_2 \sq{\continue \app l_b}} }
+    \step^*
+  {\E}_1 \sq{\hsloop \app \lam {l_b} {\pure \app \unit}}
+\]
+
+\subsection{break}
+
+\declare[hs]{break}
+\[
+  {\E}_1 \sq{ \hsloop \app \lam l {{\E}_2 \sq{\hsbreak \app l}} }
+    \step^*
+  {\E}_1 \sq{\pure \app \unit}
+\]
+
+% }}}
+
+\chapter{exception} % {{{
+
+\section{Control.Continuation.Exception}
+
+\subsection{catchC}
+
+\declare{catch}
+\( \catch_C \app \br{\lam {\p\p\cdot\p\p} \cdots} \app h \) is treated as a \emph{check binder} under which execution continues. \[
+  {\E} \sq{\catch_C \app \br{\lam x {\pure \app h_1}} \app h_2}
+    \step^*
+  {\E} \sq{\pure \app h_1}
+\]
+
+\subsection{tryC}
+
+\declare{try}
+\declare{Left}
+\declare{Right}
+\[
+  {\E} \sq{\try_C \app \lam x {\pure \app h}}
+    \step^*
+  {\E} \sq{\pure \app \br{\Right \app h}}
+\]
+
+\declare{fmap}
+\[
+  \try_C \app f
+    := \catch_C \app \br{\fmap \app \Right \comp f}
+                \app \br{\pure \comp \Left}
+\]
+
+\subsection{throwC}
+
+\declare{throw}
+\[
+  {\E}_1 \sq{\catch_C \app \br{ \lam x {{\E}_2 \sq{\throw_C \app x \app h_1}} } \app h_2}
+    \step^*
+  {\E}_1 \sq{h_2 \app h_1}
+\]
+
+% }}}
+
+\chapter{handler} % {{{
+
+\section{Control.Continuation.Handler.Explicit}
+
+\subsection{yield}
+
+\declare{yield}
+\declare{install}
+\[
+  {\E}_1 \sq{\impose \app l \app {\E}_2 \sq{\yield \app p \app {\left( \install \app l \app h_1 \right)} \app h_2}}
+    \step^*
+  {\E}_1 \sq{h_1 \app p \app h_2 \app \lam x {\impose \app l \app {\E}_2 \sq x}}
+\]
+
+\subsection{yieldP}
+
+\[
+  {\E}_1 \sq{\impose \app l \app {\E}_2 \sq{\yield_P \app p \app {\left( \install_P \app l \app h_1 \right)} \app h_2}}
+    \step^*
+  {\E}_1 \sq{h_1 \app p \app h_2 \app \lam x {\impose \app l \app {\E}_2 \sq x}}
+\]
+
+% }}}
+
+\chapter{algebraic} % {{{
+
+\section{Control.Continuation.Algebraic}
+
+\subsection{newEffectC}
+
+\declare{newEffect}
+\( \newEffect_C \app op \app \lambda \) is treated as an \emph{effect binder} under which execution continues. \[
+  {\E} \sq{\newEffect_C \app op \app \lam x {\pure \app h}}
+    \step^*
+  {\E} \sq{\pure \app h}
+\]
+
+\subsection{effC}
+
+\declare{eff}
+\[
+  {\E}_1 \sq{ \newEffect_C \app op \app \lam x {{\E}_2 \sq{\eff_C \app x \app \sigma}} }
+    \step^*
+  {\E}_1 \sq{op \app \br{ \sigma \mapping \lam y {\newEffect_C \app op \app \lam x {{\E}_2 \sq y}} }}
+\]
+
+% }}}
+
+\chapter{Appendix} % {{{
+
+\section{Reduction Semantics}
+
+\textbf{N.B. Obsolete!}
+
+\newcommand{\R}[2][\p\p]{ R^{#1} \n\n {\left[ #2 \right]} }
+\newcommand{\X}[2][\p\p]{ X^{#1} \n\n {\left[ #2 \right]} }
+\newcommand{\subst}[2]{{\left[ #1 \mapsto #2 \right]}}
+\newcommand{\name}[1]{\emph{(#1)}}
+\newcommand{\rh}[2]{\rho #1 . \, #2}
+\newcommand{\nil}{\varnothing}
+\newcommand{\bang}[1]{{! #1}}
+\newcommand{\Dom}[1]{\text{Dom}{\left(#1\right)}}
+\newcommand{\FV}[1]{\text{FV}{\left(#1\right)}}
+\newcommand{\fpair}[2]{ {\left< #1, #2 \right>} }
+\newcommand{\balance}[2]{ #1 && #2 && \phantom{#1} }
+
+First we define a language \( L_h \) with terms \( h \) and values \( v_h \).
+\( L_h \) models Haskell by embedding a monadic language \( L_e \) with terms \( e \) and values \( v_e \) into the lambda calculus.
+
+Let \( V \) be an arbitrary infinite set of symbols serving as variables.
+We take the metavariables \( x, y \in V \) distinct; \( \chi \subset V \), \( \theta \in V \parto L_h \) finite.
+\begin{align*}
+  v_h &::= \unit \| \lam x h \| e \\
+  h   &::= v_h \| h_1 \app h_2
+\end{align*}
+
+\( L_h \) is lazy and purely functional.
+Its sole reduction axiom handles function application with capture-avoiding substitution.
+For simplicity, we call-by-name rather than by need.
+
+\begin{flalign*}
+\balance
+  {\name{abstr-elim}}
+  {{\left( \lam x {h_1} \right)} \app h_2 \redAx_h h_1 \subst x {h_2}}
+\end{flalign*}
+
+The evaluation context \[
+  H ::= \hole \| H \app h
+\]
+then gives us the one-step relation \[
+  H[h] \step_h H[h'] \iff h \redAx_h h'
+\]
+which is functional, with no \( v_h \) values in its domain.
+\begin{gather*}
+  h \step_h h_a \wedge h \step_h h_b \implies h_a = h_b \\
+  v_e \redAx e
+\end{gather*}
+The many-steps relation \( \step_h^* \) is the reflexive-transitive closure of \( \step_h \), hence it provides a partial evaluation function for \( h \) expressions.
+\begin{align*}
+  &\eval(\cdot) : L_h \parto L_{v_h} \\
+  &\eval(h) = v_h \iff h \step_h^* v_h
+\end{align*}
+
+Alongside the core monad operations, \( L_e \) also has mutable references and delimited control operators---it models \Cont.
+\begin{align*}
+  v_e ::= &\,\, \rh \theta {\left( x \| \pure \app h \right)} \\
+  e   ::= &\,\, x
+       \|       \pure \app h
+       \|       e \bind h \\
+       \| &\,\, \rh \theta e
+       \|       \bang x
+       \|       x \to h \\
+       \| &\,\, \del \chi e
+       \|       \impose \app x \app e
+       \|       \sunder \app x \app h
+\end{align*}
+We identify the nullary binders \( \rh \nil e \) and \( \del \nil e \) with \( e \).
+
+\( L_e \) has various reduction axiomata.
+In order to state them all, we define a partial projection:
+\begin{align*}
+  &\proj \br \cdot : L_h \parto L_e \\
+  &\proj \br h = e \iff h = e
+\end{align*}
+And some evaluation contexts:
+\begin{align*}
+  E_{\substack{i\\x}}
+    &::= \hole
+      \| E_{\substack{i\\x}} \bind h
+      \| \rh \chi E_{\substack{i\\x}}
+      \| \del \chi E_{\substack{i\\x}}
+      \| \impose \app y \app E_{\substack{i\\x}}\\
+  R &::= \hole
+      \| R \bind h
+      \| \del \chi R
+      \| \impose \app x \app R
+\end{align*}
+As a notational convention, we make use of a kind of \emph{pattern matching} for binder sets, where \( \chi_1 \chi_2 \) denotes \( \chi_1 \cup \chi_2 \) only for disjoint \( \chi_1, \chi_2 \) and \( x \) denotes \( {\{x\}} \).
+Similarly, \( \theta_1 \theta_2 \) denotes \( \theta_1 \cup \theta_2 \) only for \( \theta_1, \theta_2 \) of disjoint domain and \( \fpair x h \) denotes \( \{(x, h)\} \).
+The \( \eval(\cdot) \) and \( \proj \br \cdot \) functions and these disjoint union operations are all intentionally partial: \emph{reduction axiomata making use of them are restricted to cases for which all are defined.}
+\begin{flalign*}
+\name{bind-pure}
+  && \pure \app h_1 \bind h_2
+  &  \redAx_e \proj \br{\eval(h_2 \app h_1)}
+  && \\
+\name{fuse-\(\rho\)}
+  && \rh {\theta_1} {\rh {\theta_2} e}
+  &  \redAx_e \rh {\theta_1 \theta_2} e
+  && \left( \theta_1, \theta_2 \not= \nil \right) \\
+\name{lift-\(\rho\)}
+  && \R {\rh \theta e}
+  &  \redAx_e \rh \theta {\R e}
+  && \left( R \not= \hole \right) \\
+\name{dereference}
+  && \rh {\theta \fpair x h} {\R {!x}}
+  &  \redAx_e \rh {\theta \fpair x h} {\R {\pure \app h}}
+  && \\
+\name{assign}
+  && \rh {\theta \fpair x h} {\R {x \to h'}}
+  &  \redAx_e \rh {\theta \fpair x {h'}} {\R {\pure \app \unit}}
+  && \\
+\name{fuse-\(\delta\)}
+  && \del {\chi_1} {\del {\chi_2} e}
+  &  \redAx_e \del {\chi_1 \chi_2} e
+  && \left( \chi_1, \chi_2 \not= \nil \right) \\
+\name{\(\delta\)-pure}
+  && \del \chi {\pure \app h}
+  &  \redAx_e \pure \app h
+  && \left( \chi \cap \FV h = \nil \right) \\
+\name{\(\delta\)-impose-pure}
+  && \del {\chi x} { {\E} \sq{\impose \app x \app {\left(\pure \app h \right)}} }
+  &  \redAx_e \del {\chi x} {{\E} \sq{\pure \app h}}
+  && \\
+\name{\(\delta\)-impose-sunder}
+  && \del {\chi x} {{\E}_1 \sq{ \impose \app x \app {{\E}_{\substack{2\\x}} \sq{\sunder \app x \app h}} }}
+  &  \redAx_e \del {\chi x} { {\E}_1 \sq{\proj \br{ \eval(h \app \lam y {{\E}_{\substack{2\\x}} \sq y}) }} }
+  &&
+\end{flalign*}
+
+% }}}
+
+\end{document}
