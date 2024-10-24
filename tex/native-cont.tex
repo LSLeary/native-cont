@@ -72,7 +72,6 @@ Swap incompatibilities!
 \newcommand{\mapping}{<\n\n\n\n\n\n\n\&\n\n\n\n\n\n\n>}
 \declare{const}
 \declare{pure}
-\declare{when}
 \declare{Base}
 %
 % INCOMPATIBILITY: Spacing around . seems to differ greatly in MathJax.
@@ -83,27 +82,7 @@ Swap incompatibilities!
 % MathJax
 %\newcommand{\qual}{\p.\n\n\n}
 %
-%
-% Do Notation
-\newcommand{\ind}{\,\,\,\,\,\,\,}
-\newcommand{\statement}[1]{& \ind #1 \\}
-\newcommand{\from}{\leftarrow}
-\newcommand{\doblockSL}[1]{{
-  \renewcommand{\ind}{}
-  \begin{aligned}
-    \code{do} \,\, #1
-  \end{aligned}
-}}
-\newcommand{\doblockNL}[2]{
-  \begin{aligned}
-    & #1 \code{do} \\
-      #2
-  \end{aligned}
-}
-%
-%
 % ST
-\declare{ST}
 \declare{newSTRef}
 \declare{readSTRef}
 \declare{writeSTRef}
@@ -114,7 +93,9 @@ Swap incompatibilities!
 \newcommand{\redAx}{ \operatorname*{\mathrel{\longrightarrow}} }
 \newcommand{\Not}[1]{\n\rlap{\,\,\,\,/} #1}
 \newcommand{\step}{ \operatorname*{\mathrel{\longmapsto}} }
-\newcommand{\F}[2]{ {}^{#1} \n\n\n\n \mathcal{F}^{#2} }
+\newcommand{\F}[2]{\sideset{^{#1\n}}{^{#2}}{
+  \operatorname{\mathcal F}
+}}
 \newcommand{\E}{\operatorname*{\mathit E}}
 \newcommand{\br}[1]{{\left(#1\right)}}
 \newcommand{\sq}[1]{{\left[#1\right]}}
@@ -569,139 +550,6 @@ In particular, \( l_b \) indicates a loop associated with body \( e_b \). \[
     \step^*
   {\E}_1 \sq{op \app \br{ \sigma \mapping \lam y {\newEffect_C \app op \app \lam x {{\E}_2 \sq y}} }}
 \]
-
-% }}}
-
-\chapter{Appendix} % {{{
-
-\section{Reduction Semantics}
-
-\textbf{N.B. Obsolete!}
-
-\newcommand{\R}[2][\p\p]{ R^{#1} \n\n {\left[ #2 \right]} }
-\newcommand{\X}[2][\p\p]{ X^{#1} \n\n {\left[ #2 \right]} }
-\newcommand{\subst}[2]{{\left[ #1 \mapsto #2 \right]}}
-\newcommand{\name}[1]{\emph{(#1)}}
-\newcommand{\rh}[2]{\rho #1 . \, #2}
-\newcommand{\nil}{\varnothing}
-\newcommand{\bang}[1]{{! #1}}
-\newcommand{\Dom}[1]{\text{Dom}{\left(#1\right)}}
-\newcommand{\FV}[1]{\text{FV}{\left(#1\right)}}
-\newcommand{\fpair}[2]{ {\left< #1, #2 \right>} }
-\newcommand{\balance}[2]{ #1 && #2 && \phantom{#1} }
-
-First we define a language \( L_h \) with terms \( h \) and values \( v_h \).
-\( L_h \) models Haskell by embedding a monadic language \( L_e \) with terms \( e \) and values \( v_e \) into the lambda calculus.
-
-Let \( V \) be an arbitrary infinite set of symbols serving as variables.
-We take the metavariables \( x, y \in V \) distinct; \( \chi \subset V \), \( \theta \in V \parto L_h \) finite.
-\begin{align*}
-  v_h &::= \unit \| \lam x h \| e \\
-  h   &::= v_h \| h_1 \app h_2
-\end{align*}
-
-\( L_h \) is lazy and purely functional.
-Its sole reduction axiom handles function application with capture-avoiding substitution.
-For simplicity, we call-by-name rather than by need.
-
-\begin{flalign*}
-\balance
-  {\name{abstr-elim}}
-  {{\left( \lam x {h_1} \right)} \app h_2 \redAx_h h_1 \subst x {h_2}}
-\end{flalign*}
-
-The evaluation context \[
-  H ::= \hole \| H \app h
-\]
-then gives us the one-step relation \[
-  H[h] \step_h H[h'] \iff h \redAx_h h'
-\]
-which is functional, with no \( v_h \) values in its domain.
-\begin{gather*}
-  h \step_h h_a \wedge h \step_h h_b \implies h_a = h_b \\
-  v_e \redAx e
-\end{gather*}
-The many-steps relation \( \step_h^* \) is the reflexive-transitive closure of \( \step_h \), hence it provides a partial evaluation function for \( h \) expressions.
-\begin{align*}
-  &\eval(\cdot) : L_h \parto L_{v_h} \\
-  &\eval(h) = v_h \iff h \step_h^* v_h
-\end{align*}
-
-Alongside the core monad operations, \( L_e \) also has mutable references and delimited control operators---it models \Cont.
-\begin{align*}
-  v_e ::= &\,\, \rh \theta {\left( x \| \pure \app h \right)} \\
-  e   ::= &\,\, x
-       \|       \pure \app h
-       \|       e \bind h \\
-       \| &\,\, \rh \theta e
-       \|       \bang x
-       \|       x \to h \\
-       \| &\,\, \del \chi e
-       \|       \impose \app x \app e
-       \|       \sunder \app x \app h
-\end{align*}
-We identify the nullary binders \( \rh \nil e \) and \( \del \nil e \) with \( e \).
-
-\( L_e \) has various reduction axiomata.
-In order to state them all, we define a partial projection:
-\begin{align*}
-  &\proj \br \cdot : L_h \parto L_e \\
-  &\proj \br h = e \iff h = e
-\end{align*}
-And some evaluation contexts:
-\begin{align*}
-  E_{\substack{i\\x}}
-    &::= \hole
-      \| E_{\substack{i\\x}} \bind h
-      \| \rh \chi E_{\substack{i\\x}}
-      \| \del \chi E_{\substack{i\\x}}
-      \| \impose \app y \app E_{\substack{i\\x}}\\
-  R &::= \hole
-      \| R \bind h
-      \| \del \chi R
-      \| \impose \app x \app R
-\end{align*}
-As a notational convention, we make use of a kind of \emph{pattern matching} for binder sets, where \( \chi_1 \chi_2 \) denotes \( \chi_1 \cup \chi_2 \) only for disjoint \( \chi_1, \chi_2 \) and \( x \) denotes \( {\{x\}} \).
-Similarly, \( \theta_1 \theta_2 \) denotes \( \theta_1 \cup \theta_2 \) only for \( \theta_1, \theta_2 \) of disjoint domain and \( \fpair x h \) denotes \( \{(x, h)\} \).
-The \( \eval(\cdot) \) and \( \proj \br \cdot \) functions and these disjoint union operations are all intentionally partial: \emph{reduction axiomata making use of them are restricted to cases for which all are defined.}
-\begin{flalign*}
-\name{bind-pure}
-  && \pure \app h_1 \bind h_2
-  &  \redAx_e \proj \br{\eval(h_2 \app h_1)}
-  && \\
-\name{fuse-\(\rho\)}
-  && \rh {\theta_1} {\rh {\theta_2} e}
-  &  \redAx_e \rh {\theta_1 \theta_2} e
-  && \left( \theta_1, \theta_2 \not= \nil \right) \\
-\name{lift-\(\rho\)}
-  && \R {\rh \theta e}
-  &  \redAx_e \rh \theta {\R e}
-  && \left( R \not= \hole \right) \\
-\name{dereference}
-  && \rh {\theta \fpair x h} {\R {!x}}
-  &  \redAx_e \rh {\theta \fpair x h} {\R {\pure \app h}}
-  && \\
-\name{assign}
-  && \rh {\theta \fpair x h} {\R {x \to h'}}
-  &  \redAx_e \rh {\theta \fpair x {h'}} {\R {\pure \app \unit}}
-  && \\
-\name{fuse-\(\delta\)}
-  && \del {\chi_1} {\del {\chi_2} e}
-  &  \redAx_e \del {\chi_1 \chi_2} e
-  && \left( \chi_1, \chi_2 \not= \nil \right) \\
-\name{\(\delta\)-pure}
-  && \del \chi {\pure \app h}
-  &  \redAx_e \pure \app h
-  && \left( \chi \cap \FV h = \nil \right) \\
-\name{\(\delta\)-impose-pure}
-  && \del {\chi x} { {\E} \sq{\impose \app x \app {\left(\pure \app h \right)}} }
-  &  \redAx_e \del {\chi x} {{\E} \sq{\pure \app h}}
-  && \\
-\name{\(\delta\)-impose-sunder}
-  && \del {\chi x} {{\E}_1 \sq{ \impose \app x \app {{\E}_{\substack{2\\x}} \sq{\sunder \app x \app h}} }}
-  &  \redAx_e \del {\chi x} { {\E}_1 \sq{\proj \br{ \eval(h \app \lam y {{\E}_{\substack{2\\x}} \sq y}) }} }
-  &&
-\end{flalign*}
 
 % }}}
 
