@@ -150,7 +150,6 @@ The kind of /scopes/.
 \newcommand{\mapping}{<\n\n\n\n\n\n\n\&\n\n\n\n\n\n\n>}
 \declare{const}
 \declare{pure}
-\declare{when}
 \declare{Base}
 %
 % INCOMPATIBILITY: Spacing around . seems to differ greatly in MathJax.
@@ -161,27 +160,7 @@ The kind of /scopes/.
 % MathJax
 \newcommand{\qual}{\p.\n\n\n}
 %
-%
-% Do Notation
-\newcommand{\ind}{\,\,\,\,\,\,\,}
-\newcommand{\statement}[1]{& \ind #1 \\}
-\newcommand{\from}{\leftarrow}
-\newcommand{\doblockSL}[1]{{
-  \renewcommand{\ind}{}
-  \begin{aligned}
-    \code{do} \,\, #1
-  \end{aligned}
-}}
-\newcommand{\doblockNL}[2]{
-  \begin{aligned}
-    & #1 \code{do} \\
-      #2
-  \end{aligned}
-}
-%
-%
 % ST
-\declare{ST}
 \declare{newSTRef}
 \declare{readSTRef}
 \declare{writeSTRef}
@@ -192,7 +171,9 @@ The kind of /scopes/.
 \newcommand{\redAx}{ \operatorname*{\mathrel{\longrightarrow}} }
 \newcommand{\Not}[1]{\n\rlap{\,\,\,\,/} #1}
 \newcommand{\step}{ \operatorname*{\mathrel{\longmapsto}} }
-\newcommand{\F}[2]{ {}^{#1} \n\n\n\n \mathcal{F}^{#2} }
+\newcommand{\F}[2]{\sideset{^{#1\n}}{^{#2}}{
+  \operatorname{\mathcal F}
+}}
 \newcommand{\E}{\operatorname*{\mathit E}}
 \newcommand{\br}[1]{{\left(#1\right)}}
 \newcommand{\sq}[1]{{\left[#1\right]}}
